@@ -1,0 +1,84 @@
+# Vá Lỗ Hổng Bảo Mật Cookie Bệnh Án Và Khắc Phục Lỗi Cache Thuốc Cũ
+
+## PHẦN 1: PHÂN TÍCH LỖ HỔNG & NGUYÊN NHÂN
+
+### 1. Tại sao Server đã cập nhật file danh mục thuốc mới nhưng trình duyệt vẫn hiển thị dữ liệu cũ? (Cơ chế Browser Cache)
+
+-   **Nguyên nhân:** Khi trình duyệt tải các tệp tài nguyên tĩnh của trang quản lý đơn thuốc lần đầu tiên (như `medicine_catalog.css` hay `pricing_data.json`), nó sẽ lưu trữ các bản sao cục bộ của các tệp này vào bộ nhớ tạm của máy tính (thông qua **Browser Cache** gồm _Memory Cache_ trên RAM hoặc _Disk Cache_ trên ổ cứng).
+    
+-   **Cơ chế Browser Cache hoạt động trong tình huống này:**
+    
+    -   Khi bác sĩ bấm phím `F5` hoặc truy cập lại trang web, trình duyệt nhận thấy các tệp tài nguyên tĩnh (CSS, JS, JSON) chưa hết hạn lưu trữ (_Cache-Control_ headers từ server chưa yêu cầu bắt buộc tải lại) và URL không thay đổi.
+        
+    -   Thay vì gửi một HTTP Request mới lên máy chủ để tải tệp danh mục thuốc mới về, trình duyệt lập tức trích xuất dữ liệu trực tiếp từ bộ nhớ cache cục bộ của máy (`(from disk cache)` hoặc `(from memory cache)` với thời gian nạp cực nhanh như 2ms). Do đó, giao diện vẫn hiển thị bảng giá và danh mục thuốc cũ của tuần trước dù phía Server đã được cập nhật.
+        
+
+### 2. Đánh cắp Token phiên đăng nhập và hiểm họa Session Hijacking do thiếu cờ bảo mật
+
+-   **Câu lệnh JavaScript để đánh cắp Token:** Nếu trang web bị dính lỗ hổng Cross-Site Scripting (XSS) và kẻ tấn công nhúng được mã JavaScript độc hại, hacker có thể dễ dàng lấy được giá trị token thông qua câu lệnh:
+    
+    JavaScript
+    
+    ```
+    const sessionToken = document.cookie;
+    // Hoặc trích xuất trực tiếp chuỗi token carepulse_doctor_session để gửi về máy chủ của hacker
+    
+    ```
+    
+-   **Hiểm họa Session Hijacking do thiếu cờ `HttpOnly` và `Secure`:**
+    
+    -   **Thiếu cờ `HttpOnly`:** Cho phép mọi đoạn mã JavaScript chạy trên trang web (kể cả mã độc do hacker tiêm vào qua lỗ hổng XSS) được quyền truy cập vào `document.cookie`. Kẻ tấn công có thể âm thầm đánh cắp chuỗi Token phiên đăng nhập `carepulse_doctor_session` và gửi về máy chủ của chúng mà bác sĩ hoàn toàn không hay biết.
+        
+    -   **Thiếu cờ `Secure`:** Cho phép trình duyệt gửi Cookie qua cả các đường truyền không mã hóa (HTTP thông thường thay vì bắt buộc HTTPS). Kẻ tấn công ngồi chung mạng Wi-Fi công cộng hoặc qua hình thức tấn công nghe lén (Man-in-the-Middle) có thể dễ dàng chặn bắt gói tin mạng và đánh cắp sạch chuỗi Token phiên làm việc.
+        
+    -   **Hậu họa tổng thể:** Khi chiếm được Token phiên đăng nhập hợp lệ của bác sĩ, hacker thực hiện hành vi **Session Hijacking (Chiếm đoạt phiên làm việc)**, mạo danh bác sĩ để truy cập trái phép vào toàn bộ hệ thống cơ sở dữ liệu hồ sơ bệnh án, xem lén thông tin nhạy cảm, thậm chí chỉnh sửa hoặc làm sai lệch kết quả điều trị của bệnh nhân.
+        
+
+## PHẦN 2: HOÀN THIỆN GIẢI PHÁP & THAO TÁC DEVTOOLS
+
+### 3. Hướng dẫn bác sĩ thực hiện Hard Reload để cập nhật danh mục thuốc ngay lập tức
+
+Để ép trình duyệt bỏ qua bộ nhớ cache cũ và tải trực tiếp danh mục thuốc mới nhất từ server mà không cần xóa lịch sử duyệt web, bác sĩ có thể sử dụng các tổ hợp phím tắt sau:
+
+-   **Trên hệ điều hành Windows / Linux:** Bấm tổ hợp phím **`Ctrl + Shift + R`** (hoặc giữ phím `Ctrl` đồng thời bấm nút **`Reload/F5`** trên thanh công cụ trình duyệt).
+    
+-   **Trên hệ điều hành macOS:** Bấm tổ hợp phím **`Cmd + Shift + R`**.
+    
+
+### 4. Viết lại dòng lệnh phản hồi `Set-Cookie` chuẩn an ninh y tế
+
+Dòng lệnh phản hồi `Set-Cookie` sau khi được vá đầy đủ các cờ bảo mật bắt buộc theo tiêu chuẩn an ninh y tế:
+
+HTTP
+
+```
+Set-Cookie: carepulse_doctor_session=TOKEN_XYZ883921983; Domain=carepulse.vn; Path=/; Expires=Wed, 21 Oct 2026 07:00:00 GMT; HttpOnly; Secure; SameSite=Strict
+
+```
+
+-   **Giải thích các cờ bảo mật bổ sung:**
+    
+    -   `HttpOnly`: Chặn đứng tuyệt đối việc mã JavaScript truy cập vào Cookie, vô hiệu hóa nguy cơ đánh cắp token qua lỗ hổng XSS.
+        
+    -   `Secure`: Ràng buộc trình duyệt chỉ truyền tải Cookie này qua các kênh kết nối mã hóa an toàn tuyệt đối (HTTPS).
+        
+    -   `SameSite=Strict`: Ngăn chặn hoàn toàn các cuộc tấn công giả mạo yêu cầu chéo trang (CSRF), đảm bảo Cookie chỉ được gửi đi trong phạm vi nội bộ trang web CarePulse.
+        
+
+### 5. 3 bước kiểm tra Cookie và vô hiệu hóa Cache tạm thời trên Chrome DevTools (F12)
+
+-   **Bước 1: Mở bộ công cụ Chrome DevTools**
+    
+    -   Nhấn phím **`F12`** (hoặc tổ hợp **`Ctrl + Shift + I`** trên Windows / **`Cmd + Option + I`** trên macOS) khi đang ở trang web CarePulse.
+        
+-   **Bước 2: Kiểm tra cấu hình Cookie (Tab Application)**
+    
+    -   Trên thanh menu của DevTools, chuyển sang tab **Application** (Ứng dụng).
+        
+    -   Ở cột bên trái, mở rộng mục **Cookies** và bấm vào tên miền `[https://carepulse.vn](https://carepulse.vn)`. Tại đây, bác sĩ/kỹ thuật viên có thể kiểm tra trực quan các thông số cấu hình của `carepulse_doctor_session` (xem cột _HttpOnly_ và _Secure_ đã được tích chọn hay chưa).
+        
+-   **Bước 3: Vô hiệu hóa Cache tạm thời để gỡ lỗi (Tab Network)**
+    
+    -   Chuyển sang tab **Network** (Mạng) trên thanh menu DevTools.
+        
+    -   Tìm và đánh dấu tích chọn vào ô hộp kiểm **`Disable cache`** (Vô hiệu hóa bộ nhớ tạm) nằm ở ngay thanh công cụ phía trên trong tab Network.  _(Lưu ý: Giữ nguyên bảng điều khiển F12 mở trong suốt quá trình thao tác để trình duyệt tự động bỏ qua cache khi tải lại trang)._

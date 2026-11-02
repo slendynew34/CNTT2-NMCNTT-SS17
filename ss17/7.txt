@@ -1,0 +1,66 @@
+# Gỡ Lỗi Luồng Yêu Cầu Kết Quả Xét Nghiệm Và Sai Lệch Mã Trạng Thái HTTP
+## PHẦN 1: PHÂN TÍCH VẤN ĐỀ
+
+### 1. Chỉ ra 4 điểm sai lệch kỹ thuật trong bản giải trình của thực tập sinh
+
+-   **Sai lệch về vai trò DNS:** Thực tập sinh cho rằng trình duyệt gửi trực tiếp URL tới Web Server mà không cần thông qua hệ thống DNS.
+    
+    -   _Sự thật:_ Máy tính và trình duyệt chỉ hiểu và giao tiếp được thông qua địa chỉ IP (ví dụ:  `192.0.2.1`). DNS (Domain Name System) đóng vai trò bắt buộc phải làm việc đầu tiên để phân giải tên miền dạng chữ `carepulse.vn` thành địa chỉ IP của máy chủ thì trình duyệt mới biết phải kết nối đi đâu.
+        
+-   **Sai lệch về quy trình TCP/TLS:** Thực tập sinh cho rằng trình duyệt tải ngay mã nguồn HTML mà không cần bắt tay TCP/TLS vì HTTPS tự động kết nối mở không điều kiện.
+    
+    -   _Sự thật:_ Bất kỳ kết nối bảo mật nào (HTTPS) cũng bắt buộc phải thực hiện quy trình bắt tay 3 bước của TCP (TCP 3-way Handshake) để thiết lập kênh truyền tin tin cậy, sau đó tiếp tục thực hiện quá trình bắt tay TLS (TLS Handshake) để trao đổi khóa mã hóa nhằm đảm bảo an toàn thông tin trước khi bất kỳ gói tin HTTP Request nào được truyền đi.
+        
+-   **Sai lệch về mã lỗi HTTP:** Khi máy chủ cơ sở dữ liệu sập, thực tập sinh lại nhận định hệ thống trả về mã `404 Not Found` và giải thích rằng hồ sơ bệnh án của bệnh nhân đã bị "xóa vĩnh viễn".
+    
+    -   _Sự thật:_ Mã `404` chỉ phản ánh việc không tìm thấy đường dẫn URL tài nguyên trên server. Khi lỗi xuất phát từ phía hạ tầng backend hoặc cơ sở dữ liệu bị sập nguồn, mã chuẩn xác phải là `500 Internal Server Error`. Việc đổ lỗi cho việc "xóa vĩnh viễn hồ sơ" là nhận thức sai lầm hoàn toàn về trạng thái hệ thống.
+        
+-   **Sai lệch về việc sửa DOM trên Tab Elements:** Thực tập sinh lầm tưởng rằng việc gõ sửa trực tiếp chữ trên Tab Elements của Chrome DevTools sẽ cập nhật được dữ liệu gốc trên Database của máy chủ.
+    
+    -   _Sự thật:_ Tab Elements chỉ là công cụ kiểm tra và chỉnh sửa cấu trúc DOM tạm thời trên **bộ nhớ RAM của máy cục bộ (Client-side)**. Thao tác này hoàn toàn không thể tác động hay ghi đè lên cơ sở dữ liệu đặt ở máy chủ từ xa (Server-side Database).
+        
+
+### 2. Ý nghĩa mã 500 khi sập Database và hậu quả tâm lý đối với bệnh nhân
+
+-   **Vì sao mã trả về đúng phải là 500 thay vì 404?**
+    
+    -   Mã **500 Internal Server Error** biểu thị lỗi từ phía máy chủ (Server-side Error), thông báo rằng máy chủ vẫn nhận được yêu cầu nhưng gặp sự cố kỹ thuật nội bộ (như sập dịch vụ backend, mất kết nối cơ sở dữ liệu, lỗi code xử lý).
+        
+    -   Trong khi đó, mã **404 Not Found** dùng khi đường dẫn URL không tồn tại. Khi hệ thống vẫn đang vận hành bình thường nhưng database bị quá tải/sập, nguyên nhân là do lỗi hạ tầng hệ thống chứ không phải do đường dẫn sai hay mất tệp tin, do đó dùng mã `500` mới phản ánh đúng bản chất kỹ thuật.
+        
+-   **Hậu quả tai hại đối với tâm lý bệnh nhân nếu thông báo sai thành 404:**
+    
+    -   Khi nhìn thấy thông báo dạng "Không tìm thấy trang / Không tìm thấy hồ sơ" kèm theo lời giải thích cẩu thả rằng hồ sơ đã bị "xóa vĩnh viễn", bệnh nhân sẽ rơi vào trạng thái **hoảng loạn tâm lý cực độ, lo sợ, mất niềm tin nghiêm trọng** vào độ uy tín và an toàn bảo mật dữ liệu y tế của bệnh viện CarePulse. Họ sẽ nghĩ rằng kết quả xét nghiệm quan trọng của mình đã bị thất lạc hoặc tiêu hủy do sự bất cẩn của hệ thống.
+        
+
+## PHẦN 2: SỬA LỖI & HOÀN THIỆN GIẢI PHÁP
+
+### 3. Biên bản giải trình kỹ thuật chuẩn xác theo 4 bước vòng đời HTTP Request
+
+> **BIÊN BẢN GIẢI TRÌNH KỸ THUẬT SỰ CỐ HỆ THỐNG CAREPULSE (ĐÃ HIỆU CHỈNH)**
+> 
+> -   **Bước 1 (DNS Lookup):** Khi người dùng truy cập địa chỉ `[https://carepulse.vn/records/patient8821](https://carepulse.vn/records/patient8821)`, trình duyệt tiến hành truy vấn hệ thống phân giải tên miền (DNS) để dịch tên miền `carepulse.vn` thành địa chỉ IP chính xác của máy chủ hệ thống CarePulse.
+>     
+> -   **Bước 2 (TCP/TLS Handshake):** Trình duyệt thiết lập kết nối mạng an toàn thông qua quy trình bắt tay 3 bước TCP (TCP 3-way Handshake) để mở kênh truyền tin, tiếp tục thực hiện bắt tay TLS (TLS Handshake) nhằm mã hóa đường truyền HTTPS, bảo vệ tuyệt đối tính bảo mật và toàn vẹn dữ liệu y tế của bệnh nhân.
+>     
+> -   **Bước 3 (HTTP Request & Response):** Trình duyệt gửi gói tin HTTP Request tới máy chủ. Do dịch vụ kết nối cơ sở dữ liệu phía backend đang gặp sự cố tạm thời (sập dịch vụ), máy chủ không thể truy vấn dữ liệu và phản hồi lại bằng mã lỗi chuẩn **500 Internal Server Error** (Lỗi nội bộ máy chủ), kèm theo thông báo kỹ thuật yêu cầu kỹ thuật viên kiểm tra lại hạ tầng cơ sở dữ liệu.
+>     
+> -   **Bước 4 (Rendering Pipeline):** Trình duyệt nhận phản hồi lỗi từ máy chủ, tiến hành phân tích cú pháp HTML/CSS và render giao diện hiển thị thông báo lỗi hệ thống tạm thời (hoặc trạng thái bảo trì) lên màn hình của bệnh nhân, hướng dẫn bệnh nhân thử lại sau ít phút.
+>     
+
+### 4. Giải thích nguyên lý bộ nhớ: Tại sao sửa chữ trên Tab Elements không lưu được trên máy chủ?
+
+-   **Cơ chế lưu trữ Client-side (RAM cục bộ):** Khi bạn dùng tính năng Inspect Element trên Tab Elements của Chrome DevTools để sửa đổi một đoạn văn bản hay mã HTML trên giao diện, trình duyệt chỉ đang thay đổi trạng thái của **Cây DOM (Document Object Model)** hiện đang được nạp tạm thời trong bộ nhớ RAM của chính chiếc máy tính cá nhân (Client).
+    
+-   **Sự cô lập với Server-side Database:** Máy chủ CarePulse và cơ sở dữ liệu lưu trữ hồ sơ bệnh án nằm ở một hệ thống máy chủ từ xa (Remote Server). Trình duyệt của bạn hoàn toàn không có quyền hạn hoặc kết nối trực tiếp để ghi đè dữ liệu xuống ổ cứng/database của máy chủ chỉ thông qua một thao tác thay đổi giao diện cục bộ.
+    
+-   **Hậu quả khi tải lại trang (Reload / F5):** Ngay khi bạn bấm phím `F5` hoặc tải lại trang web, trình duyệt sẽ xóa bỏ toàn bộ cấu trúc DOM cũ đang lưu trên RAM, gửi một HTTP Request hoàn toàn mới lên máy chủ CarePulse để kéo dữ liệu gốc từ Database về. Do đó, mọi chỉnh sửa thủ công bằng tay trên Tab Elements sẽ ngay lập tức biến mất và trả về nguyên trạng dữ liệu thật từ máy chủ.
+    
+
+### 📝 Hướng dẫn cách nộp bài:
+
+1.  Copy toàn bộ nội dung Markdown ở trên dán vào một file lưu dưới dạng `[B26DTCN091]_[IT108]_[Session17]_[Bai7].md` (hoặc tạo file Google Docs / Word tương ứng).
+    
+2.  Đưa file lên **GitHub Repository** công khai (public) của bạn.
+    
+3.  Lấy đường dẫn (link) của repository đó và dán vào ô **"Link bài làm để nộp"** trên hệ thống LMS Portal, sau đó bấm **Nộp bài tập**.

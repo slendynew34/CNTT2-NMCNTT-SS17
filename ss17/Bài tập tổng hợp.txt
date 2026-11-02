@@ -1,0 +1,189 @@
+Ngày Đầu Thực Tập Dev Tại Công Ty Công Nghệ
+
+## Phần A – Thiết lập Profile và Bookmark chuẩn Dev
+
+### 1. Xung đột phiên đăng nhập (Session Conflict) khi dùng chung 1 Profile cho cả hai tài khoản GitHub
+
+-   **Giải thích:** Nếu tiếp tục dùng chung 1 Profile, trình duyệt và các trang web sẽ bị nhầm lẫn danh tính do lưu trữ chung không gian Cookie và phiên làm việc. Khi đăng nhập song song cả GitHub cá nhân và GitHub công ty trên cùng một Profile, sẽ xảy ra hiện tượng **xung đột phiên đăng nhập (Session Conflict)**: tài khoản đăng nhập sau có thể ghi đè hoặc đá tài khoản trước ra, dẫn đến việc bạn bị văng phiên (log out) liên tục hoặc đẩy nhầm code dự án công ty bằng tài khoản cá nhân.
+    
+
+### 2. Mô hình 3 Profile chuẩn Developer trong bối cảnh công ty
+
+**Profile**
+
+**Tên đặt**
+
+**Mục đích sử dụng**
+
+**1**
+
+`Personal`
+
+Dùng cho các hoạt động cá nhân (mạng xã hội, giải trí, email cá nhân, GitHub cá nhân).
+
+**2**
+
+`Company_Work`
+
+Dùng chuyên biệt cho công việc công ty (Git công ty, Jira, Confluence, email doanh nghiệp, tool nội bộ).
+
+**3**
+
+`Sandbox/Test`
+
+Dùng làm môi trường sạch để thử nghiệm các tính năng mới, kiểm thử extension hoặc test code mà không ảnh hưởng dữ liệu chính.
+
+### 3. Thiết kế cấu trúc Bookmark gồm 3 thư mục
+
+-   **Thư mục 1: `01_Work_Dev`** (Lưu các trang làm việc/lập trình)
+    
+    -   Trang 1:  [GitHub](https://github.com/)
+        
+    -   Trang 2:  [Stack Overflow](https://stackoverflow.com/)
+        
+-   **Thư mục 2: `02_Tools_Docs`** (Lưu tài liệu và công cụ hỗ trợ)
+    
+    -   Trang 1:  [MDN Web Docs](https://developer.mozilla.org/)
+        
+    -   Trang 2:  [Can I use](https://caniuse.com/)
+        
+-   **Thư mục 3: `03_News_Learning`** (Lưu trang tin tức và học tập)
+    
+    -   Trang 1:  [Rikkei Education LMS](https://lms-student.rikkei.edu.vn/)
+        
+    -   Trang 2:  [Dev.to](https://dev.to/)
+        
+
+### 4. Chế độ/Profile khi đồng nghiệp mượn máy 5 phút
+
+-   **Giải pháp:** Cho đồng nghiệp dùng **Chế độ Khách (Guest Mode)** hoặc một **Profile tạm thời** khác.
+    
+-   **Giải thích ngắn gọn:** Chế độ Khách tạo ra một không gian cô lập hoàn toàn, không cho phép người mượn nhìn thấy lịch sử, mật khẩu hay tài khoản cá nhân của bạn, đồng thời tự động xóa sạch toàn bộ dữ liệu phiên làm việc ngay khi đóng cửa sổ.
+    
+
+## Phần B – Chọn đúng Extension hỗ trợ
+
+### 1. Xử lý đường link API JSON thô
+
+-   **Thuộc nhóm:** Nhóm Lập trình (**Dev Suite**).
+    
+-   **Tên tiện ích:**  **JSON Viewer** (hoặc JSON Formatter).
+    
+-   **Vì sao 2 nhóm còn lại không phù hợp:**
+    
+    -   _Productivity Suite_ (như Color Picker) chuyên dùng để hỗ trợ thiết kế giao diện, chấm màu chứ không thể phân tích và làm đẹp cấu trúc dữ liệu thô.
+        
+    -   _Security Suite_ (như uBlock Origin) chuyên dùng để chặn quảng cáo và bảo mật duyệt web, không có tính năng định dạng cú pháp dữ liệu API.
+        
+
+### 2. Cấu hình quyền Site Access
+
+-   **Cấu hình:** Chọn **`On click`**.
+    
+-   **Giải thích theo quy tắc quản trị Extensions:** Theo quy tắc phân quyền Site Access an toàn, việc giới hạn quyền ở mức `On click` giúp extension chỉ hoạt động khi bạn chủ động bấm vào icon của nó, ngăn chặn việc tiện ích liên tục theo dõi, đọc dữ liệu và thu thập thông tin trên mọi trang web bạn truy cập (`On all sites`), từ đó bảo vệ tốt hơn quyền riêng tư cá nhân.
+    
+
+## Phần C – Phân tích luồng HTTP Request
+
+### 1. 4 giai đoạn xử lý khi gõ `test.internal-tool.com` và nhấn Enter
+
+1.  **DNS Lookup:** Phân giải tên miền `test.internal-tool.com` thành địa chỉ IP của máy chủ.
+    
+2.  **TCP/TLS Handshake:** Thiết lập kết nối mạng an toàn qua quy trình bắt tay 3 bước TCP và bắt tay mã hóa TLS (HTTPS).
+    
+3.  **HTTP Request & Response:** Trình duyệt gửi yêu cầu HTTP Request tới máy chủ và nhận lại gói tin phản hồi HTTP Response (chứa mã trạng thái và mã nguồn).
+    
+4.  **Rendering Pipeline:** Trình duyệt phân tích cú pháp HTML/CSS, tính toán bố cục và vẽ các điểm ảnh (pixels) lên màn hình hiển thị trang web.
+    
+
+### 2. So sánh mã trạng thái (Status Code)
+
+**Mã trạng thái**
+
+**Ý nghĩa**
+
+**Lỗi nằm ở đâu?**
+
+**Hướng debug ban đầu**
+
+`404 Not Found`
+
+Không tìm thấy tài nguyên hoặc đường dẫn URL yêu cầu trên máy chủ.
+
+Phía Client (do gõ sai đường dẫn URL) hoặc cấu hình sai route ở Backend.
+
+Kiểm tra lại chính xác đường dẫn URL, kiểm tra cấu hình route/đường dẫn trên server.
+
+`500 Internal Server Error`
+
+Lỗi nội bộ máy chủ (Server gặp sự cố khi xử lý yêu cầu).
+
+Phía Server (lỗi code Backend, sập kết nối Database, quá tải hệ thống).
+
+Kiểm tra Terminal/Log của máy chủ Backend hoặc trạng thái kết nối cơ sở dữ liệu.
+
+### 3. Tab xem mã trạng thái HTTP
+
+-   **Mở Tab:**  **Network Tab**.
+    
+-   **Vì sao không chọn các Tab còn lại:**
+    
+    -   _Elements_ dùng để xem và sửa cấu trúc Cây DOM / CSS.
+        
+    -   _Console_ dùng để xem lỗi JavaScript và chạy lệnh debug.
+        
+    -   _Application_ dùng để quản lý Storage, Cookies và Cache.
+        
+    -   Chỉ có _Network Tab_ mới là nơi ghi lại toàn bộ các gói tin yêu cầu mạng (Network Requests) và hiển thị trực quan mã trạng thái HTTP (Status Code) của từng tài nguyên.
+        
+
+## Phần D – Chẩn đoán Cache và Cookies
+
+### 1. Lỗi Dev sửa CSS nhưng F5 vẫn thấy giao diện cũ
+
+-   **Nguyên nhân:** Trình duyệt đang tải tệp CSS cũ được lưu trữ sẵn trong bộ nhớ tạm cục bộ (**Browser Cache**) thay vì gửi yêu cầu mới tải từ Server về do URL không đổi và chưa hết hạn cache.
+    
+-   **Thao tác khắc phục:** Thực hiện **Hard Reload (Tải lại cưỡng bức)** bằng tổ hợp phím **`Ctrl + Shift + R`** (trên Windows) hoặc **`Cmd + Shift + R`** (trên macOS).
+    
+
+### 2. Cookie `session_id` thiếu dấu tích cột `HttpOnly`
+
+-   **Rủi ro bảo mật cụ thể:** Mã JavaScript bất kỳ chạy trên trang web (đặc biệt là mã độc được tiêm vào qua lỗ hổng Cross-Site Scripting - XSS) có thể dễ dàng đọc được giá trị `document.cookie` để lấy cắp chuỗi Token phiên làm việc của người dùng.
+    
+-   **Tên loại tấn công:**  **Session Hijacking** (Chiếm đoạt phiên làm việc).
+    
+
+### 3. Đăng xuất tài khoản nhưng vẫn giữ nguyên Cache ảnh/CSS
+
+-   **Thao tác:** Thay vì chọn Clear toàn bộ dữ liệu duyệt web, bạn chỉ cần **xóa cụ thể Cookie định danh phiên đăng nhập** (ví dụ: xóa hoặc expire thủ công cookie `session_id` trong tab _Application_ hoặc bấm nút Logout chuẩn của ứng dụng web). Khi đó, các tệp tài nguyên tĩnh (ảnh, CSS, JS) vẫn được giữ nguyên trong bộ nhớ Cache giúp trang load nhanh ở các lần truy cập sau.
+    
+
+## Phần E – Debug bằng Inspect Element và Network Tab
+
+### 1. Sửa màu nút "Đăng nhập" trực tiếp trên trình duyệt
+
+-   **Thao tác kỹ thuật:**
+    
+    1.  Nhấn tổ hợp phím **`Ctrl + Shift + C`** (hoặc chuột phải vào nút "Đăng nhập" chọn **Inspect**).
+        
+    2.  Tại bảng **Elements**, chọn đúng thẻ HTML của nút.
+        
+    3.  Nhìn sang khung **Styles** bên cạnh, tìm thuộc tính màu sắc (như `background-color`) và bấm vào ô màu để chỉnh sửa trực tiếp mã màu nhằm kiểm thử trực quan trên giao diện, sau đó lấy mã màu chuẩn xác báo lại cho Dev.
+        
+
+### 2. Quy trình 4 bước Debugging cho API lỗi (dòng màu đỏ trên Network)
+
+1.  **Bước 1 (Tái hiện lỗi - Reproduce):** Giữ nguyên bảng DevTools mở ở Tab Network và thao tác lại hành động gây ra lỗi để bắt chính xác gói tin API đang bị lỗi màu đỏ.
+    
+2.  **Bước 2 (Cô lập lỗi - Isolate):** Bấm vào dòng request API màu đỏ đó, kiểm tra Tab **Response** hoặc **Preview** để xem thông điệp lỗi (Error Message) từ server trả về, xác định xem lỗi do sai Payload hay do lỗi Backend.
+    
+3.  **Bước 3 (Khắc phục - Fix):** Sửa lỗi dựa trên chẩn đoán (ví dụ: điều chỉnh lại tham số gửi đi ở client hoặc báo Dev sửa logic ở server).
+    
+4.  **Bước 4 (Kiểm thử lại - Verify):** Tải lại trang hoặc gửi lại request để kiểm tra xem dòng màu đỏ trên Network đã chuyển sang trạng thái thành công (`200 OK`) hay chưa.
+    
+
+### 3. 2 thao tác cần bật trên tab Network để chỉ xem API và chống lấy dữ liệu từ Cache
+
+1.  **Thao tác 1 (Chỉ lọc các lời gọi API):** Bấm chọn vào bộ lọc **`Fetch/XHR`** trên thanh công cụ của tab Network để ẩn đi ảnh, CSS, JS và chỉ hiển thị các gọi lệnh API.
+    
+2.  **Thao tác 2 (Chống lấy dữ liệu từ bộ nhớ đệm):** Đánh dấu tích chọn vào ô hộp kiểm **`Disable cache`** nằm ở thanh menu phía trên trong tab Network để ép trình duyệt luôn tải dữ liệu mới nhất từ server.
